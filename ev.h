@@ -109,7 +109,7 @@ typedef struct ev_watcher_time
 /* revent EV_READ, EV_WRITE */
 typedef struct ev_io
 {
-  EV_WATCHER (ev_io)
+  EV_WATCHER_LIST (ev_io)
 
   int fd;     /* ro */
   int events; /* ro */
@@ -168,7 +168,6 @@ EV_API_DECL void ev_break (EV_P) EV_THROW; /* break out of the loop */
 #include <string.h> /* for memmove */
 #define ev_cb_(ev)                           (ev)->cb /* rw */
 #define ev_set_cb(ev,cb_)                    (ev_cb_ (ev) = (cb_), memmove (&((ev_watcher *)(ev))->cb, &ev_cb_ (ev), sizeof (ev_cb_ (ev))))
-
 
 EV_API_DECL void ev_io_start       (EV_P, ev_io *w) EV_THROW;
 EV_API_DECL void ev_io_stop        (EV_P, ev_io *w) EV_THROW;
