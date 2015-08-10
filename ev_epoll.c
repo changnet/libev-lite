@@ -68,7 +68,7 @@
 #define EV_EMASK_EPERM 0x80
 
 static void
-epoll_modify (EV_P_ int fd, int oev, int nev)
+epoll_modify (EV_P, int fd, int oev, int nev)
 {
   struct epoll_event ev;
   unsigned char oldmask;
@@ -131,7 +131,7 @@ epoll_modify (EV_P_ int fd, int oev, int nev)
       return;
     }
 
-  fd_kill (EV_A_ fd);
+  fd_kill (loop, fd);
 
 dec_egen:
   /* we didn't successfully call epoll_ctl, so decrement the generation counter again */
@@ -139,7 +139,7 @@ dec_egen:
 }
 
 static void
-epoll_poll (EV_P_ ev_tstamp timeout)
+epoll_poll (EV_P, ev_tstamp timeout)
 {
   int i;
   int eventcnt;
@@ -149,9 +149,7 @@ epoll_poll (EV_P_ ev_tstamp timeout)
 
   /* epoll wait times cannot be larger than (LONG_MAX - 999UL) / HZ msecs, which is below */
   /* the default libev max wait time, however. */
-  EV_RELEASE_CB;
   eventcnt = epoll_wait (backend_fd, epoll_events, epoll_eventmax, timeout * 1e3);
-  EV_ACQUIRE_CB;
 
   if (expect_false (eventcnt < 0))
     {
@@ -178,8 +176,6 @@ epoll_poll (EV_P_ ev_tstamp timeout)
        */
       if (expect_false ((uint32_t)anfds [fd].egen != (uint32_t)(ev->data.u64 >> 32)))
         {
-          /* recreate kernel state */
-          postfork = 1;
           continue;
         }
 
@@ -203,12 +199,11 @@ epoll_poll (EV_P_ ev_tstamp timeout)
           /* which is fortunately easy to do for us. */
           if (epoll_ctl (backend_fd, want ? EPOLL_CTL_MOD : EPOLL_CTL_DEL, fd, ev))
             {
-              postfork = 1; /* an error occurred, recreate kernel state */
               continue;
             }
         }
 
-      fd_event (EV_A_ fd, got);
+      fd_event (loop, fd, got);
     }
 
   /* if the receive array was full, increase its size */
@@ -226,7 +221,7 @@ epoll_poll (EV_P_ ev_tstamp timeout)
       unsigned char events = anfds [fd].events & (EV_READ | EV_WRITE);
 
       if (anfds [fd].emask & EV_EMASK_EPERM && events)
-        fd_event (EV_A_ fd, events);
+        fd_event (loop, fd, events);
       else
         {
           epoll_eperms [i] = epoll_eperms [--epoll_epermcnt];
@@ -236,7 +231,7 @@ epoll_poll (EV_P_ ev_tstamp timeout)
 }
 
 int inline_size
-epoll_init (EV_P_ int flags)
+epoll_init (EV_P)
 {
 #ifdef EPOLL_CLOEXEC
   backend_fd = epoll_create1 (EPOLL_CLOEXEC);
@@ -256,8 +251,8 @@ epoll_init (EV_P_ int flags)
 
   epoll_eventmax = 64; /* initial number of events receivable per poll */
   epoll_events = (struct epoll_event *)ev_malloc (sizeof (struct epoll_event) * epoll_eventmax);
-
-  return EVBACKEND_EPOLL;
+  
+  return 1;
 }
 
 void inline_size
@@ -266,17 +261,3 @@ epoll_destroy (EV_P)
   ev_free (epoll_events);
   array_free (epoll_eperm, EMPTY);
 }
-
-void inline_size
-epoll_fork (EV_P)
-{
-  close (backend_fd);
-
-  while ((backend_fd = epoll_create (256)) < 0)
-    ev_syserr ("(libev) epoll_create");
-
-  fcntl (backend_fd, F_SETFD, FD_CLOEXEC);
-
-  fd_rearm_all (EV_A);
-}
-
