@@ -166,7 +166,7 @@ ev_realloc (void *ptr, long size)
 /* file descriptor info structure */
 typedef struct
 {
-  WL head;
+  W w;
   unsigned char events; /* the events watched for */
   unsigned char reify;  /* flag set when this ANFD needs reification (EV_ANFD_REIFY, EV__IOFDSET) */
   unsigned char emask;  /* the epoll backend stores the actual kernel mask in here */
@@ -338,15 +338,10 @@ inline_speed void
 fd_event_nocheck (EV_P, int fd, int revents)
 {
   ANFD *anfd = anfds + fd;
-  ev_io *w;
+  ev_io *w = (ev_io *)(anfd->w);
 
-  for (w = (ev_io *)anfd->head; w; w = (ev_io *)((WL)w)->next)
-    {
-      int ev = w->events & revents;
-
-      if (ev)
-        ev_feed_event (loop, (W)w, ev);
-    }
+  if ( w->events & revents )  /* TODO should not need to check */
+    ev_feed_event (loop, (W)w, revents);
 }
 
 /* do not submit kernel events for fds that have reify set */
@@ -378,7 +373,7 @@ fd_reify (EV_P)
     {
       int fd = fdchanges [i];
       ANFD *anfd = anfds + fd;
-      ev_io *w;
+      ev_io *w = (ev_io *)(anfd->w);
 
       unsigned char o_events = anfd->events;
       unsigned char o_reify  = anfd->reify;
@@ -388,9 +383,7 @@ fd_reify (EV_P)
       /*if (expect_true (o_reify & EV_ANFD_REIFY)) probably a deoptimisation */
         {
           anfd->events = 0;
-
-          for (w = (ev_io *)anfd->head; w; w = (ev_io *)((WL)w)->next)
-            anfd->events |= (unsigned char)w->events;
+          anfd->events |= (unsigned char)w->events;
 
           if (o_events != anfd->events)
             o_reify = EV__IOFDSET; /* actually |= */
@@ -422,13 +415,10 @@ fd_change (EV_P, int fd, int flags)
 inline_speed void ev_cold
 fd_kill (EV_P, int fd)
 {
-  ev_io *w;
+  ev_io *w = (ev_io *)anfds [fd].w;
 
-  while ((w = (ev_io *)anfds [fd].head))
-    {
-      ev_io_stop (loop, w);
-      ev_feed_event (loop, (W)w, EV_ERROR | EV_READ | EV_WRITE);
-    }
+  ev_io_stop (loop, w);
+  ev_feed_event (loop, (W)w, EV_ERROR | EV_READ | EV_WRITE);
 }
 
 /* check whether the given fd is actually valid, for error recovery */
@@ -849,10 +839,9 @@ ev_io_start (EV_P, ev_io *w) EV_THROW
 
   ev_start (loop, (W)w, 1);
   array_needsize (ANFD, anfds, anfdmax, fd + 1, array_init_zero);
-  wlist_add (&anfds[fd].head, (WL)w);
 
-  /* common bug, apparently */
-  assert (("libev: ev_io_start called with corrupted watcher", ((WL)w)->next != (WL)w));
+  assert (("libev: ev_io_start called with duplicate fd", anfds[fd].w == 0));
+  anfds[fd].w = (W)w;
 
   fd_change (loop, fd, w->events & EV__IOFDSET | EV_ANFD_REIFY);
   w->events &= ~EV__IOFDSET;
@@ -868,7 +857,7 @@ ev_io_stop (EV_P, ev_io *w) EV_THROW
 
   assert (("libev: ev_io_stop called with illegal fd (must stay constant after start!)", w->fd >= 0 && w->fd < anfdmax));
 
-  wlist_del (&anfds[w->fd].head, (WL)w);
+  anfds[w->fd].w = 0;
   ev_stop (loop, (W)w);
 
   fd_change (loop, w->fd, EV_ANFD_REIFY);
