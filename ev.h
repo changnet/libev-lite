@@ -55,7 +55,9 @@ enum {
 
 #define EV_CB_DECLARE(type) void (*cb)(EV_P, struct type *w, int revents);
 #define EV_CB_INVOKE(watcher,revents) (watcher)->cb (loop, (watcher), (revents))
-
+/* can be used to add custom fields to all watchers, while losing binary 
+compatibility,a object pointer in cpp */
+# define EV_COMMON void *data;
 /*
  * struct member types:
  * private: you may look at them, but not change them,
@@ -74,9 +76,10 @@ enum {
  */
 
 /* shared by all watchers */
-#define EV_WATCHER(type)            \
-  int active; /* private */            \
-  int pending; /* private */            \
+#define EV_WATCHER(type)              \
+  int active; /* private */           \
+  int pending; /* private */          \
+  EV_COMMON /* rw */                  \
   EV_CB_DECLARE (type) /* private */
 
 #define EV_WATCHER_LIST(type)            \
@@ -129,22 +132,35 @@ typedef struct ev_prepare
   EV_WATCHER (ev_prepare)
 } ev_prepare;
 
-EV_API_DECL ev_tstamp ev_rt_now;
-EV_INLINE ev_tstamp
-ev_now (void) EV_THROW
-{
-  return ev_rt_now;
-}
-
 /* create a event loop,and should be the only one */
 EV_API_DECL struct ev_loop *ev_loop_new () EV_THROW;
 /* destroy event loops, also works for the default loop */
 EV_API_DECL void ev_loop_destroy (EV_P);
 
+EV_API_DECL ev_tstamp ev_now (EV_P) EV_THROW; /* time w.r.t. timers and the eventloop, updated after each poll */
+
 EV_API_DECL void ev_now_update (EV_P) EV_THROW; /* update event loop time */
+EV_API_DECL void ev_sleep (ev_tstamp delay) EV_THROW; /* sleep for a while */
 
 EV_API_DECL int  ev_run (EV_P);
 EV_API_DECL void ev_break (EV_P) EV_THROW; /* break out of the loop */
+
+EV_API_DECL int ev_version_major (void) EV_THROW;
+EV_API_DECL int ev_version_minor (void) EV_THROW;
+
+/* Sets the allocation function to use, works like realloc.
+ * It is used to allocate and free memory.
+ * If it returns zero when memory needs to be allocated, the library might abort
+ * or take some potentially destructive action.
+ * The default is your system realloc function.
+ */
+EV_API_DECL void ev_set_allocator (void *(*cb)(void *ptr, long size) EV_THROW) EV_THROW;
+
+/* set the callback function to call on a
+ * retryable syscall error
+ * (such as failed select, poll, epoll_wait)
+ */
+EV_API_DECL void ev_set_syserr_cb (void (*cb)(const char *msg) EV_THROW) EV_THROW;
 
 /* these may evaluate ev multiple times, and the other arguments at most once */
 /* either use ev_init + ev_TYPE_set, or the ev_TYPE_init macro, below, to first initialise a watcher */

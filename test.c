@@ -50,6 +50,7 @@
      // now wait for events to arrive
      ev_run (loop);
 
+     ev_loop_destroy (loop);
      // break was called, so exit
      return 0;
    }

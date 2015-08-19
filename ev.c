@@ -217,6 +217,12 @@ get_clock (void)
   return ts.tv_sec + ts.tv_nsec * 1e-9;
 }
 
+ev_tstamp
+ev_now (EV_P) EV_THROW
+{
+  return ev_rt_now;
+}
+
 void
 ev_sleep (ev_tstamp delay) EV_THROW
 {
@@ -776,30 +782,6 @@ ev_now_update (EV_P) EV_THROW
 }
 
 /*****************************************************************************/
-/* singly-linked list management, used when the expected list length is short */
-
-inline_size void
-wlist_add (WL *head, WL elem)
-{
-  elem->next = *head;
-  *head = elem;
-}
-
-inline_size void
-wlist_del (WL *head, WL elem)
-{
-  while (*head)
-    {
-      if (expect_true (*head == elem))
-        {
-          *head = elem->next;
-          break;
-        }
-
-      head = &(*head)->next;
-    }
-}
-
 /* internal, faster, version of ev_clear_pending */
 inline_speed void
 clear_pending (EV_P, W w)
