@@ -112,7 +112,7 @@ typedef struct ev_watcher_time
 /* revent EV_READ, EV_WRITE */
 typedef struct ev_io
 {
-  EV_WATCHER_LIST (ev_io)
+  EV_WATCHER (ev_io)
 
   int fd;     /* ro */
   int events; /* ro */
